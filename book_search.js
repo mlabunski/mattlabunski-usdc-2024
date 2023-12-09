@@ -29,8 +29,11 @@ function findSearchTermInBooks(searchTerm, scannedTextObj) {
 
   result.SearchTerm = searchTerm;
 
+  /** Iterates through each book within the scanned text, and each line within each book.
+   *  If a line contains the search term, then the current book (ISBN), page, and line are added to results.
+   */
   scannedTextObj.forEach((book) => {
-    book.Content.forEach((line) => {
+    book.Content.forEach((line, index) => {
       if (line.Text.includes(searchTerm)) {
         const newResult = {
           ISBN: book.ISBN,
@@ -38,6 +41,35 @@ function findSearchTermInBooks(searchTerm, scannedTextObj) {
           Line: line.Line,
         };
         result.Results.push(newResult);
+      }
+
+      /** Check if this line ends with a "-" which indicates a hyphenated word */
+      if (line.Text.slice(-1) === "-") {
+        /**remove "-" from the end of the line */
+        var thisLine = line.Text.substring(0, line.Text.length - 1);
+        var nextLine = book.Content[index + 1].Text;
+
+        /** Create a substring of this line, beginning after the index of the last space within the line
+         *  This gives us the first half of the hyphenated word.
+         */
+        var wordFront = thisLine.substring(thisLine.lastIndexOf(" ") + 1);
+
+        /** Create a substring of the next line of the text, beginning at the start of the next line, and ending at the first space
+         *  This gives us the second half of the hyphenated word.
+         */
+        var wordBack = nextLine.substring(0, nextLine.indexOf(" "));
+
+        /** Combine the two substrings (first half of hyphenated word and second half of hyphenated word) and compare to search term.
+         *  If it's a match, add the current line (where the hyphenated word begins) to the results (along with current page and book ISBN).
+         */
+        if (wordFront + wordBack === searchTerm) {
+          const newResult = {
+            ISBN: book.ISBN,
+            Page: line.Page,
+            Line: line.Line,
+          };
+          result.Results.push(newResult);
+        }
       }
     });
   });
@@ -82,6 +114,49 @@ const twentyLeaguesOut = {
   ],
 };
 
+/**Output object for "darkness" */
+const twentyLeaguesOutDarkness = {
+  SearchTerm: "darkness",
+  Results: [
+    {
+      ISBN: "9780000528531",
+      Page: 31,
+      Line: 8,
+    },
+  ],
+};
+
+/**Output object for "found"
+ * "found" is not present in the text,
+ * but "profound" is present
+ */
+const twentyLeaguesOutFound = {
+  SearchTerm: "found",
+  Results: [],
+};
+
+/**Output object for "SIMPLY"
+ * Should return no results
+ */
+const twentyLeaguesOutSimplyUpper = {
+  SearchTerm: "SIMPLY",
+  Results: [],
+};
+
+/**Output object for "simply"
+ * Should return 1 result
+ */
+const twentyLeaguesOutSimplyLower = {
+  SearchTerm: "simply",
+  Results: [
+    {
+      ISBN: "9780000528531",
+      Page: 31,
+      Line: 8,
+    },
+  ],
+};
+
 /*
  _   _ _   _ ___ _____   _____ _____ ____ _____ ____  
 | | | | \ | |_ _|_   _| |_   _| ____/ ___|_   _/ ___| 
@@ -117,3 +192,64 @@ if (test2result.Results.length == 1) {
   console.log("Expected:", twentyLeaguesOut.Results.length);
   console.log("Received:", test2result.Results.length);
 }
+
+/** Check that a hyphenated word break (darkness) is found*/
+const testWordBreak = findSearchTermInBooks("darkness", twentyLeaguesIn);
+if (
+  JSON.stringify(twentyLeaguesOutDarkness) === JSON.stringify(testWordBreak)
+) {
+  console.log("PASS: Test Word Break");
+  console.log("Expected:", twentyLeaguesOutDarkness);
+  console.log("Received:", testWordBreak);
+} else {
+  console.log("FAIL: Test Word Break");
+  console.log("Expected:", twentyLeaguesOutDarkness);
+  console.log("Received:", testWordBreak);
+}
+
+/** Check that if the search term is a substring of another word, there is not a false result
+ * (i.e. for search term "found" , "profound" should not be a positive result) */
+const testWordWithinWord = findSearchTermInBooks("found", twentyLeaguesIn);
+if (
+  JSON.stringify(twentyLeaguesOutFound) === JSON.stringify(testWordWithinWord)
+) {
+  console.log("PASS: Test Word Within Word - profound");
+} else {
+  console.log("FAIL: Test Word Within Word");
+  console.log("Expected:", twentyLeaguesOutFound);
+  console.log("Received:", testWordWithinWord);
+}
+
+/** Check that the same word yields different results depending on capitalization*/
+const testCapitalizationUpper = findSearchTermInBooks(
+  "SIMPLY",
+  twentyLeaguesIn
+);
+const testCapitalizationLower = findSearchTermInBooks(
+  "simply",
+  twentyLeaguesIn
+);
+
+if (
+  JSON.stringify(twentyLeaguesOutSimplyUpper) ===
+    JSON.stringify(testCapitalizationUpper) &&
+  JSON.stringify(twentyLeaguesOutSimplyLower) ===
+    JSON.stringify(testCapitalizationLower)
+) {
+  console.log("PASS: Test Capitalization");
+  console.log("Expected:", twentyLeaguesOutSimplyUpper);
+  console.log("Received:", testCapitalizationUpper);
+  console.log("Expected:", twentyLeaguesOutSimplyLower);
+  console.log("Received:", testCapitalizationLower);
+} else {
+  console.log("FAIL: Test Capitalization");
+  console.log("Expected:", twentyLeaguesOutSimplyUpper);
+  console.log("Received:", testCapitalizationUpper);
+  console.log("Expected:", twentyLeaguesOutSimplyLower);
+  console.log("Received:", testCapitalizationLower);
+}
+
+//TODO: Get Word Within Word Test to pass.
+//TODO: Test for empty scanned text object
+//TODO: Test for book with empty lines
+//TODO: Test for results in multiple books
