@@ -27,52 +27,77 @@ function findSearchTermInBooks(searchTerm, scannedTextObj) {
     Results: [],
   };
 
+  /** The result should always contain the search term, even there are no book results */
   result.SearchTerm = searchTerm;
 
-  /** Iterates through each book within the scanned text, and each line within each book.
-   *  If a line contains the search term, then the current book (ISBN), page, and line are added to results.
-   */
-  scannedTextObj.forEach((book) => {
-    book.Content.forEach((line, index) => {
-      if (line.Text.includes(searchTerm)) {
-        const newResult = {
-          ISBN: book.ISBN,
-          Page: line.Page,
-          Line: line.Line,
-        };
-        result.Results.push(newResult);
-      }
+  /** Checks if scannedTextObj is empty */
+  if (!(JSON.stringify(scannedTextObj) === "{}")) {
+    /** Iterates through each book within the scanned text, and each line within each book.
+     */
+    scannedTextObj.forEach((book) => {
+      book.Content.forEach((line, index) => {
+        /** If the line contains the search term, split the line into subtrings separated by each space in the line */
+        if (line.Text.includes(searchTerm)) {
+          var words = line.Text.split(" ");
 
-      /** Check if this line ends with a "-" which indicates a hyphenated word */
-      if (line.Text.slice(-1) === "-") {
-        /**remove "-" from the end of the line */
-        var thisLine = line.Text.substring(0, line.Text.length - 1);
-        var nextLine = book.Content[index + 1].Text;
+          /** For each of the substrings, remove any extra spaces and calculate the length of the substring */
+          for (word in words) {
+            var currentWord = words[word].trim();
+            var currentWordLength = currentWord.length;
 
-        /** Create a substring of this line, beginning after the index of the last space within the line
-         *  This gives us the first half of the hyphenated word.
-         */
-        var wordFront = thisLine.substring(thisLine.lastIndexOf(" ") + 1);
+            /** If the current substring is longer than the search term and contains the search term... */
+            if (
+              currentWordLength >= searchTerm.length &&
+              currentWord.includes(searchTerm)
+            ) {
+              /** ...remove the following punctuation from the substring by replacing it with "" */
+              var wordNoPunct = currentWord.replace(/[.,!:&*';-]/g, "");
 
-        /** Create a substring of the next line of the text, beginning at the start of the next line, and ending at the first space
-         *  This gives us the second half of the hyphenated word.
-         */
-        var wordBack = nextLine.substring(0, nextLine.indexOf(" "));
-
-        /** Combine the two substrings (first half of hyphenated word and second half of hyphenated word) and compare to search term.
-         *  If it's a match, add the current line (where the hyphenated word begins) to the results (along with current page and book ISBN).
-         */
-        if (wordFront + wordBack === searchTerm) {
-          const newResult = {
-            ISBN: book.ISBN,
-            Page: line.Page,
-            Line: line.Line,
-          };
-          result.Results.push(newResult);
+              /** Now compare with the search term, and if it is a match, add to results */
+              if (wordNoPunct === searchTerm) {
+                const newResult = {
+                  ISBN: book.ISBN,
+                  Page: line.Page,
+                  Line: line.Line,
+                };
+                result.Results.push(newResult);
+              }
+            }
+          }
         }
-      }
+
+        /** Check if this line ends with a "-" which indicates a hyphenated word */
+        if (line.Text.slice(-1) === "-") {
+          /**remove "-" from the end of the line */
+          var thisLine = line.Text.substring(0, line.Text.length - 1);
+          /**get the next line of text */
+          var nextLine = book.Content[index + 1].Text;
+
+          /** Create a substring of this line, beginning after the index of the last space within the line
+           *  This gives us the first half of the hyphenated word.
+           */
+          var wordFront = thisLine.substring(thisLine.lastIndexOf(" ") + 1);
+
+          /** Create a substring of the next line of the text, beginning at the start of the next line, and ending at the first space
+           *  This gives us the second half of the hyphenated word.
+           */
+          var wordBack = nextLine.substring(0, nextLine.indexOf(" "));
+
+          /** Combine the two substrings (first half of hyphenated word and second half of hyphenated word) and compare to search term.
+           *  If it's a match, add the current line (where the hyphenated word begins) to the results (along with current page and book ISBN).
+           */
+          if (wordFront + wordBack === searchTerm) {
+            const newResult = {
+              ISBN: book.ISBN,
+              Page: line.Page,
+              Line: line.Line,
+            };
+            result.Results.push(newResult);
+          }
+        }
+      });
     });
-  });
+  }
 
   return result;
 }
@@ -97,6 +122,73 @@ const twentyLeaguesIn = [
         Page: 31,
         Line: 10,
         Text: "eyes were, I asked myself how he had managed to see, and",
+      },
+    ],
+  },
+];
+
+/** Book with no content */
+const EmptyBookIn = [
+  {
+    Title: "The Empty Book",
+    ISBN: "0000000001",
+    Content: [],
+  },
+];
+
+/** Object with multiple books */
+const MultipleBookIn = [
+  {
+    Title: "The Empty Book",
+    ISBN: "0000000001",
+    Content: [],
+  },
+
+  {
+    Title: "Twenty Thousand Leagues Under the Sea",
+    ISBN: "9780000528531",
+    Content: [
+      {
+        Page: 31,
+        Line: 8,
+        Text: "now simply went on by her own momentum.  The dark-",
+      },
+      {
+        Page: 31,
+        Line: 9,
+        Text: "ness was then profound; and however good the Canadian's",
+      },
+      {
+        Page: 31,
+        Line: 10,
+        Text: "eyes were, I asked myself how he had managed to see, and",
+      },
+    ],
+  },
+
+  {
+    Title: "The Fakest Book",
+    ISBN: "4031990332023",
+    Content: [
+      {
+        Page: 1,
+        Line: 1,
+        Text: "So begins the fakest book of all time, ",
+      },
+      {
+        Page: 1,
+        Line: 2,
+        Text: "which was created for no reason. It was written by",
+      },
+      {
+        Page: 1,
+        Line: 3,
+        Text: "a person however the name isn't real.",
+      },
+      {
+        Page: 2,
+        Line: 1,
+        Text: "The book only has two pages, so this is it.",
       },
     ],
   },
@@ -157,6 +249,33 @@ const twentyLeaguesOutSimplyLower = {
   ],
 };
 
+/**Output object for "however"
+ * Should return 2 results - 1 result from 2 different books
+ */
+const multipleBooksOutHowever = {
+  SearchTerm: "however",
+  Results: [
+    {
+      ISBN: "9780000528531",
+      Page: 31,
+      Line: 9,
+    },
+    {
+      ISBN: "4031990332023",
+      Page: 1,
+      Line: 3,
+    },
+  ],
+};
+
+/**Output object for "word" - searched in an empty book
+ * Should return the search term with no results
+ */
+const emptyBookOut = {
+  SearchTerm: "word",
+  Results: [],
+};
+
 /*
  _   _ _   _ ___ _____   _____ _____ ____ _____ ____  
 | | | | \ | |_ _|_   _| |_   _| ____/ ___|_   _/ ___| 
@@ -214,8 +333,10 @@ if (
   JSON.stringify(twentyLeaguesOutFound) === JSON.stringify(testWordWithinWord)
 ) {
   console.log("PASS: Test Word Within Word - profound");
+  console.log("Expected:", twentyLeaguesOutFound);
+  console.log("Received:", testWordWithinWord);
 } else {
-  console.log("FAIL: Test Word Within Word");
+  console.log("FAIL: Test Word Within Word - profound");
   console.log("Expected:", twentyLeaguesOutFound);
   console.log("Received:", testWordWithinWord);
 }
@@ -249,7 +370,42 @@ if (
   console.log("Received:", testCapitalizationLower);
 }
 
-//TODO: Get Word Within Word Test to pass.
-//TODO: Test for empty scanned text object
-//TODO: Test for book with empty lines
-//TODO: Test for results in multiple books
+/** Check multiple books for the same search term */
+const testMultipleBooks = findSearchTermInBooks("however", MultipleBookIn);
+if (
+  JSON.stringify(multipleBooksOutHowever) === JSON.stringify(testMultipleBooks)
+) {
+  console.log("PASS: Test Multiple Books - however");
+  console.log("Expected:", multipleBooksOutHowever);
+  console.log("Received:", testMultipleBooks);
+} else {
+  console.log("FAIL: Test Multiple Books - however");
+  console.log("Expected:", multipleBooksOutHowever);
+  console.log("Received:", testMultipleBooks);
+}
+
+/** Check book with no content */
+const testEmptyBook = findSearchTermInBooks("word", EmptyBookIn);
+if (JSON.stringify(emptyBookOut) === JSON.stringify(testEmptyBook)) {
+  console.log("PASS: Test Empty Book");
+  console.log("Expected:", emptyBookOut);
+  console.log("Received:", testEmptyBook);
+} else {
+  console.log("FAIL: Test Empty Book");
+  console.log("Expected:", emptyBookOut);
+  console.log("Received:", testEmptyBook);
+}
+
+/** Check empty scanned text object */
+const testEmptyObj = findSearchTermInBooks("word", {});
+if (JSON.stringify(emptyBookOut) === JSON.stringify(testEmptyObj)) {
+  console.log("PASS: Test Empty Obj");
+  console.log("Expected:", emptyBookOut);
+  console.log("Received:", testEmptyObj);
+} else {
+  console.log("FAIL: Test Empty Obj");
+  console.log("Expected:", emptyBookOut);
+  console.log("Received:", testEmptyObj);
+}
+
+//TODO: Final check and changes before submission
