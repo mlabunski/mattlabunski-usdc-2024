@@ -51,7 +51,10 @@ function findSearchTermInBooks(searchTerm, scannedTextObj) {
               currentWord.includes(searchTerm)
             ) {
               /** ...remove the following punctuation from the substring by replacing it with "" */
-              var wordNoPunct = currentWord.replace(/[.,!:&*';-]/g, "");
+              var wordNoPunct = currentWord.replace(
+                /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g,
+                ""
+              );
 
               /** Now compare with the search term, and if it is a match, add to results */
               if (wordNoPunct === searchTerm) {
@@ -86,7 +89,13 @@ function findSearchTermInBooks(searchTerm, scannedTextObj) {
           /** Combine the two substrings (first half of hyphenated word and second half of hyphenated word) and compare to search term.
            *  If it's a match, add the current line (where the hyphenated word begins) to the results (along with current page and book ISBN).
            */
-          if (wordFront + wordBack === searchTerm) {
+
+          var combinedWord = wordFront + wordBack;
+
+          if (
+            combinedWord.replace(/[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g, "") ===
+            searchTerm
+          ) {
             const newResult = {
               ISBN: book.ISBN,
               Page: line.Page,
@@ -122,6 +131,26 @@ const twentyLeaguesIn = [
         Page: 31,
         Line: 10,
         Text: "eyes were, I asked myself how he had managed to see, and",
+      },
+    ],
+  },
+];
+
+/** Example input object. */
+const WordBreakPunctIn = [
+  {
+    Title: "The Broken Book",
+    ISBN: "135792468",
+    Content: [
+      {
+        Page: 13,
+        Line: 3,
+        Text: "This book has a word break that is very un-",
+      },
+      {
+        Page: 13,
+        Line: 4,
+        Text: "fortunate. Oh well.",
       },
     ],
   },
@@ -218,6 +247,18 @@ const twentyLeaguesOutDarkness = {
   ],
 };
 
+/**Output object for "see" */
+const twentyLeaguesOutSee = {
+  SearchTerm: "see",
+  Results: [
+    {
+      ISBN: "9780000528531",
+      Page: 31,
+      Line: 10,
+    },
+  ],
+};
+
 /**Output object for "found"
  * "found" is not present in the text,
  * but "profound" is present
@@ -276,6 +317,18 @@ const emptyBookOut = {
   Results: [],
 };
 
+/**Output object for "unfortunate" in Broken Book */
+const WordBreakPunctOut = {
+  SearchTerm: "unfortunate",
+  Results: [
+    {
+      ISBN: "135792468",
+      Page: 13,
+      Line: 3,
+    },
+  ],
+};
+
 /*
  _   _ _   _ ___ _____   _____ _____ ____ _____ ____  
 | | | | \ | |_ _|_   _| |_   _| ____/ ___|_   _/ ___| 
@@ -326,6 +379,21 @@ if (
   console.log("Received:", testWordBreak);
 }
 
+/** Check that a hyphenated word break (unfortunate) is found in Broken Book*/
+const testWordBreakPunct = findSearchTermInBooks(
+  "unfortunate",
+  WordBreakPunctIn
+);
+if (JSON.stringify(WordBreakPunctOut) === JSON.stringify(testWordBreakPunct)) {
+  console.log("PASS: Test Word Break Punct");
+  console.log("Expected:", WordBreakPunctOut);
+  console.log("Received:", testWordBreakPunct);
+} else {
+  console.log("FAIL: Test Word Break Punct");
+  console.log("Expected:", WordBreakPunctOut);
+  console.log("Received:", testWordBreakPunct);
+}
+
 /** Check that if the search term is a substring of another word, there is not a false result
  * (i.e. for search term "found" , "profound" should not be a positive result) */
 const testWordWithinWord = findSearchTermInBooks("found", twentyLeaguesIn);
@@ -339,6 +407,18 @@ if (
   console.log("FAIL: Test Word Within Word - profound");
   console.log("Expected:", twentyLeaguesOutFound);
   console.log("Received:", testWordWithinWord);
+}
+
+/** Check for a word that has punctuation at the end.  */
+const testPunctEnd = findSearchTermInBooks("see", twentyLeaguesIn);
+if (JSON.stringify(twentyLeaguesOutSee) === JSON.stringify(testPunctEnd)) {
+  console.log("PASS: Test Punct End - see");
+  console.log("Expected:", twentyLeaguesOutSee);
+  console.log("Received:", testPunctEnd);
+} else {
+  console.log("FAIL: Test Punct End - see");
+  console.log("Expected:", twentyLeaguesOutSee);
+  console.log("Received:", testPunctEnd);
 }
 
 /** Check that the same word yields different results depending on capitalization*/
@@ -407,5 +487,3 @@ if (JSON.stringify(emptyBookOut) === JSON.stringify(testEmptyObj)) {
   console.log("Expected:", emptyBookOut);
   console.log("Received:", testEmptyObj);
 }
-
-//TODO: Final check and changes before submission
